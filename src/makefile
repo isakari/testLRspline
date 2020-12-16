@@ -2,7 +2,7 @@ TARGET = ../bin/a.out
 
 FC = gfortran
 USE_OPENMP = 1
-# OPT = 1
+OPT = 1
 DBG = 1
 OBJS = module_globals.o \
 	main.o
@@ -21,12 +21,12 @@ ifdef DBG
 FFLAGS += $(FDEBUGS) -DDBG
 endif
 
-CC = gcc
-CDEBUGS = -g -fbounds-check -Wuninitialized -Wunused
-CFLAGS = -MMD -DUSE_COMPLEX -funroll-loops -funswitch-loops 
-ifdef DBG
-CFLAGS += $(CDEBUGS)
-endif
+# CC = gcc
+# CDEBUGS = -g -fbounds-check -Wuninitialized -Wunused
+# CFLAGS = -MMD -DUSE_COMPLEX -funroll-loops -funswitch-loops 
+# ifdef DBG
+# CFLAGS += $(CDEBUGS)
+# endif
 
 ifdef OPT
 ifeq ($(FC), $(GFORTRAN))
@@ -73,16 +73,17 @@ endif
 endif
 
 .SUFFIXES:
-.SUFFIXES: .o .f90 .f .c
+# .SUFFIXES: .o .f90 .f .c
+.SUFFIXES: .o .f90
 
-.f.o:
-	$(FC) $(FFLAGS) -c $<
+# .f.o:
+# 	$(FC) $(FFLAGS) -c $<
 
 .f90.o:
 	$(FC) $(FFLAGS) -c $<
 
-.c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+# .c.o:
+# 	$(CC) $(CFLAGS) $(INCLUDES) -c $<
 
 %.mod: %.f90 %.o
 	@:
