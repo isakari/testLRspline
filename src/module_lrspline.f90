@@ -76,7 +76,7 @@ contains
   end function tail
   
   !> new_lrsのknot(とnext)をset
-  subroutine set_knot(new_lrs,tn1,tn2,next)
+  subroutine set_new_knot(new_lrs,tn1,tn2,next)
     type(LocallyRefinedSpline),pointer,intent(inout) :: new_lrs
     real(8),intent(in) :: tn1(0:ndeg(1)+1), tn2(0:ndeg(2)+1)
     type(LocallyRefinedSpline),pointer,optional,intent(in) :: next
@@ -94,7 +94,7 @@ contains
     new_lrs%tn1=tn1
     new_lrs%tn2=tn2
 
-  end subroutine set_knot
+  end subroutine set_new_knot
   
   !> append an lrs function at the last 
   subroutine append_knot(a,tn1,tn2)
@@ -106,9 +106,9 @@ contains
 
     if(associated(a))then !aがあれば
        iter=>tail(a) !aのお尻
-       call set_knot(iter%next,tn1,tn2) !の次にtn1,tn2をset
+       call set_new_knot(iter%next,tn1,tn2) !の次にtn1,tn2をset
     else !aがなければ
-       call set_knot(a,tn1,tn2) !a(の先頭)にtn1,tn2をset
+       call set_new_knot(a,tn1,tn2) !a(の先頭)にtn1,tn2をset
     end if
 
   end subroutine append_knot
@@ -192,7 +192,7 @@ contains
     ! create a new LR spline function
     nullify(new_lrs)
     !new_lrs-->iterとつなぐ
-    call set_knot(new_lrs,tn1,tn2,next=iter)
+    call set_new_knot(new_lrs,tn1,tn2,next=iter)
     new_lrs%cp=cp
     new_lrs%gma=gma
     
@@ -411,6 +411,37 @@ contains
     idx=idx-1 !削除した分
     
   end subroutine local_split_2
+
+  !> meshlineがknot区間をsplitするか
+  function is_split(ml,tn1,tn2) result(res)
+    type(MeshLine) :: ml !< meshlie
+    real(8) :: tn1(0:ndeg(1)+1) !< xi
+    real(8) :: tn2(0:ndeg(2)+1) !< eta
+    logical :: res
+
+    integer :: i
+
+    if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ is_split"
+    
+    if(ml%idir.eq.2)then
+       res=(tn1(0)<ml%pos)&
+            .and.(ml%pos<tn1(ndeg(1)+1))&
+            .and.(ml%st.le.tn2(0))&
+            .and.(tn2(ndeg(2)+1).le.ml%en)
+       do i=0,ndeg(1)
+          res=res.and.abs(tn1(i)-ml%pos).gt.tiny
+       end do
+    else
+       res=(tn2(0)<ml%pos)&
+            .and.(ml%pos<tn2(ndeg(2)+1))&
+            .and.(ml%st.le.tn1(0))&
+            .and.(tn1(ndeg(1)+1).le.ml%en)
+       do i=0,ndeg(2)
+          res=res.and.abs(tn2(i)-ml%pos).gt.tiny
+       end do
+    end if
+    
+  end function is_split
   
   !> Algorithm 2
   subroutine refine_LRspline(a,ml)
@@ -429,21 +460,13 @@ contains
     iter=>a
     do while(associated(iter))
        if(ml%idir.eq.2)then ! vertical meshline insertion
-          if((iter%tn1(0)<ml%pos)& !mlがiterのsupportを分断するなら
-               .and.(ml%pos<iter%tn1(ndeg(1)+1))&
-               .and.(ml%st.le.iter%tn2(0))&
-               .and.(iter%tn2(ndeg(2)+1)).le.ml%en)then
+          if(is_split(ml,iter%tn1,iter%tn2))then !mlがiterを分断するなら
              b=iter
-             nullify(b%next)
              call local_split_1(a,b,icnt,ml%pos)
           end if
        else ! horizontal meshline insertion
-          if((iter%tn2(0)<ml%pos)& !mlがiterのsupportを分断するなら
-               .and.(ml%pos<iter%tn2(ndeg(2)+1))&
-               .and.(ml%st.le.iter%tn1(0))&
-               .and.(iter%tn1(ndeg(1)+1)).le.ml%en)then
+          if(is_split(ml,iter%tn1,iter%tn2))then !mlがiterを分断するなら
              b=iter
-             nullify(b%next)
              call local_split_2(a,b,icnt,ml%pos)
           end if
        end if
@@ -462,26 +485,13 @@ contains
        iter=>a
        do while(associated(iter))
           if(ml2%idir.eq.2)then ! vertical meshline insertion
-             if((iter%tn1(0)<ml2%pos)& !ml2がiterのsupportを分断するなら
-                  .and.(ml2%pos<iter%tn1(ndeg(1)+1))&
-                  .and.(ml2%st.le.iter%tn2(0))&
-                  .and.(iter%tn2(ndeg(2)+1)).le.ml2%en&
-                  .and.(abs(iter%tn1(0)-ml2%pos).gt.tiny)&
-                  .and.(abs(iter%tn1(1)-ml2%pos).gt.tiny)&
-                  .and.(abs(iter%tn1(2)-ml2%pos).gt.tiny)&
-                  .and.(abs(iter%tn1(3)-ml2%pos).gt.tiny))then
+             if(is_split(ml2,iter%tn1,iter%tn2))then !ml2がiterのsupportを分断するなら
                 b=iter
-                nullify(b%next)
                 call local_split_1(a,b,icnt,ml2%pos)
              end if
           else ! horizontal meshline insertion
-             stop "aho"
-             if((iter%tn2(0)<ml2%pos)& !ml2がiterのsupportを分断するなら
-                  .and.(ml2%pos<iter%tn2(ndeg(2)+1))&
-                  .and.(ml2%st.le.iter%tn1(0))&
-                  .and.(iter%tn1(ndeg(1)+1)).le.ml2%en)then
+             if(is_split(ml2,iter%tn1,iter%tn2))then !ml2がiterのsupportを分断するなら
                 b=iter
-                nullify(b%next)
                 call local_split_2(a,b,icnt,ml2%pos)
              end if
           end if
