@@ -321,6 +321,98 @@ contains
     
   end subroutine local_split_1
   
+  !> Algorithm 1 (local eta split)
+  !> \brief LR-spline aの中の LR-spline function b を eta=t により refine する
+  subroutine local_split_2(a,b,idx,t)
+    type(LocallyRefinedSpline),pointer,intent(inout) :: a !< LR-spline
+    type(LocallyRefinedSpline),intent(in) :: b !< LR-spline function to be refined
+    integer,intent(inout) :: idx !< b is idx-th function in a
+    real(8),intent(in) :: t !< inserted knot value
+
+    real(8) :: alp(2)
+    real(8) :: tn(0:ndeg(2)+2) !xi
+    real(8) :: tn1a(0:ndeg(1)+1) !xi1
+    real(8) :: tn1b(0:ndeg(1)+1) !xi2
+    real(8) :: tn2a(0:ndeg(2)+1) !eta1
+    real(8) :: tn2b(0:ndeg(2)+1) !eta2
+    real(8) :: dis1(0:ndeg(1)+1), dis2(0:ndeg(2)+1)
+    logical :: exist
+    type(LocallyRefinedSpline),pointer :: iter
+
+    integer :: i
+
+    ! alpha
+    alp(1)=1.d0
+    if(t.le.b%tn2(ndeg(1))) alp(1)=(t-b%tn2(0))/(b%tn2(ndeg(2))-b%tn2(0))
+    alp(2)=1.d0
+    if(b%tn2(1).le.t) alp(2)=(b%tn2(ndeg(2)+1)-t)/(b%tn2(ndeg(2)+1)-b%tn2(1))
+    ! write(*,*) alp(:)
+    
+    ! eta, eta1, eta2
+    tn(0)=t
+    tn(1:ndeg(2)+2)=b%tn2(:)
+    tn=qsort(tn)
+    ! write(*,*) tn
+
+    do i=0,ndeg(2)
+       if(abs(tn(i+1)-tn(i)).le.tiny) return !knotが重複するならばsplitする必要なし
+    end do
+
+    tn2a(:)=tn(0:ndeg(2)+1)
+    tn2b(:)=tn(1:ndeg(2)+2)
+    ! write(*,*) tn2a
+    ! write(*,*) tn2b
+
+    ! xi1, xi2
+    tn1a(:)=b%tn1(:)
+    tn1b(:)=b%tn1(:)
+    ! write(*,*) tn1a
+    ! write(*,*) tn1b
+
+    ! 8-15行目
+    exist=false
+    iter=>a
+    do while(associated(iter))
+       dis1=abs(iter%tn1-tn1a)
+       dis2=abs(iter%tn2-tn2a)
+       if((maxval(dis1).le.tiny).and.(maxval(dis2).le.tiny))then
+          exist=true
+          iter%cp(:)=(iter%cp(:)*iter%gma+b%cp(:)*b%gma*alp(1))/(iter%gma+alp(1)*b%gma)
+          iter%gma=iter%gma+alp(1)*b%gma
+          exit
+       end if
+       iter=>iter%next
+    end do
+    if(exist.eqv.false)then ! idxの前に local knot を追加
+       call insert_LRspline(a,idx-1,tn1a,tn2a,b%cp,alp(1)*b%gma)
+       idx=idx+1 !追加した分
+    end if
+
+    ! 16-23行目
+    exist=false
+    iter=>a
+    do while(associated(iter))
+       dis1=abs(iter%tn1-tn1b)
+       dis2=abs(iter%tn2-tn2b)
+       if((maxval(dis1).le.tiny).and.(maxval(dis2).le.tiny))then
+          exist=true
+          iter%cp(:)=(iter%cp(:)*iter%gma+b%cp(:)*b%gma*alp(2))/(iter%gma+alp(2)*b%gma)
+          iter%gma=iter%gma+alp(2)*b%gma
+          exit
+       end if
+       iter=>iter%next
+    end do
+    if(exist.eqv.false)then ! idxの前に local knot を追加
+       call insert_LRspline(a,idx-1,tn1b,tn2b,b%cp,alp(2)*b%gma)
+       idx=idx+1 !追加した分
+    end if
+
+    ! 24行目
+    call remove_LRspline(a,idx)
+    idx=idx-1 !削除した分
+    
+  end subroutine local_split_2
+  
   !> Algorithm 2
   subroutine refine_LRspline(a,ml)
     type(LocallyRefinedSpline),pointer,intent(inout) :: a !< LR-spline
@@ -346,25 +438,19 @@ contains
              call local_split_1(a,b,icnt,ml%pos)
           end if
        else ! horizontal meshline insertion
-!!$          if((iter%tn2(0)<ml%pos)& !mlがiterのsupportを分断するなら
-!!$               .and.(ml%pos<iter%tn2(ndeg(2)+1)).and.&
-!!$               (ml%st.le.iter%tn1(0))&
-!!$               .and.(iter%tn1(ndeg(1)+1)).le.ml%en)then 
-!!$             call local_split_2(a,iter,ml%pos,icnt) !local eta split
-!!$          end if
+          if((iter%tn2(0)<ml%pos)& !mlがiterのsupportを分断するなら
+               .and.(ml%pos<iter%tn2(ndeg(2)+1))&
+               .and.(ml%st.le.iter%tn1(0))&
+               .and.(iter%tn1(ndeg(1)+1)).le.ml%en)then
+             b=iter
+             nullify(b%next)
+             call local_split_2(a,b,icnt,ml%pos)
+          end if
        end if
        iter=>iter%next
        icnt=icnt+1
     end do
 
-!!$    !test
-!!$    icnt=0
-!!$    iter=>a
-!!$    do while(associated(iter))
-!!$       write(*,*) int(iter%tn1*6),"|",int(iter%tn2*6)
-!!$       icnt=icnt+1
-!!$       iter=>iter%next
-!!$    end do
     
   end subroutine refine_LRspline
   

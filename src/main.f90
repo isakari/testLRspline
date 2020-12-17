@@ -54,13 +54,20 @@ program main
   end do
   close(1)
   
+!!$  ! refine (see Fig. 8)
+!!$  ml%idir=2
+!!$  ml%pos=3.d0/6.d0
+!!$  ml%st=1.d0/6.d0
+!!$  ml%en=5.d0/6.d0
+!!$  call refine_LRspline(lrs,ml)
+
   ! refine (see Fig. 8)
-  ml%idir=2
+  ml%idir=1
   ml%pos=3.d0/6.d0
   ml%st=1.d0/6.d0
   ml%en=5.d0/6.d0
   call refine_LRspline(lrs,ml)
-
+  
   ! LRmeshをdraw
   call draw_LRmesh(lrs,"LRmesh2.res")
 
