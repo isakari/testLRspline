@@ -2,7 +2,7 @@ TARGET = ../bin/a.out
 
 FC = gfortran
 USE_OPENMP = 1
-OPT = 1
+#OPT = 1
 DBG = 1
 OBJS = module_globals.o \
 	module_lrspline.o \
@@ -49,7 +49,7 @@ ifdef OPT
 LIBS = -lm
 endif
 
-LIBS += -lslatec
+LIBS += # -lslatec
 ifeq ($(FC), $(GFORTRAN))
 LIBS += -llapack -lblas
 endif

@@ -43,7 +43,7 @@ program main
   end do
 
   ! surfaceをdraw
-  call draw_surface(lrs,100,"surface.res")
+  call draw_surface(lrs,10,"surface.res")
 
   ! control point を draw
   open(1,file="controlpoints.res")
@@ -65,7 +65,7 @@ program main
   call draw_LRmesh(lrs,"LRmesh2.res")
 
   ! surfaceをdraw
-  call draw_surface(lrs,100,"surface2.res")
+  call draw_surface(lrs,10,"surface2.res")
 
   ! control point を draw
   open(1,file="controlpoints2.res")
@@ -75,7 +75,6 @@ program main
      iter=>iter%next
   end do
   close(1)
-  
 
   ! finalise
   deallocate(tn1,tn2)

@@ -75,23 +75,24 @@ contains
 
   end function tail
   
-  !> aのknot(とnext)をset
-  subroutine set_knot(a,tn1,tn2,next)
-    type(LocallyRefinedSpline),pointer,intent(out) :: a
+  !> new_lrsのknot(とnext)をset
+  subroutine set_knot(new_lrs,tn1,tn2,next)
+    type(LocallyRefinedSpline),pointer,intent(inout) :: new_lrs
     real(8),intent(in) :: tn1(0:ndeg(1)+1), tn2(0:ndeg(2)+1)
     type(LocallyRefinedSpline),pointer,optional,intent(in) :: next
 
-    nullify(a); allocate(a) !空の領域をallocate
+    nullify(new_lrs);
+    allocate(new_lrs) !空の領域をallocate
 
     if(present(next))then !nextが指定されていれば
-       a%next=>next !aの次にnextを渡す
+       new_lrs%next=>next !new_lrsの次にnextを渡す
     else !そうでなければ
-       nullify(a%next) !aの次は何もない
+       nullify(new_lrs%next) !new_lrsの次は何もない
     end if
 
-    !knotをaに渡す
-    a%tn1=tn1
-    a%tn2=tn2
+    !knotをnew_lrsに渡す
+    new_lrs%tn1=tn1
+    new_lrs%tn2=tn2
 
   end subroutine set_knot
   
@@ -151,6 +152,82 @@ contains
 
   end subroutine set_greville
 
+  !> quick sort
+  pure recursive function qsort(x) result(res)
+    real(8),intent(in) :: x(:)
+    real(8) :: res(size(x))
+    integer :: n
+    n=size(x)
+    if(n>1)then
+       res=[qsort(pack((x(2:)),x(2:)<x(1))),& !x(2:)のなかでx(1)より小さいものをソート
+            x(1),& !x(1)を並べる
+            qsort(pack(x(2:),x(2:)>=x(1)))]!x(2:)のなかでx(1)以上のものをソート
+    else
+       res=x
+    end if
+  end function qsort
+
+  !> insert a LR-spline function at the given index
+  subroutine insert_LRspline(a,idx,tn1,tn2,cp,gma)
+    type(LocallyRefinedSpline),pointer,intent(inout) :: a !< LRspline
+    integer,intent(in) :: idx !< aの(idx)のうしろに lrs function をはさみ、tn1&tn2を渡す
+    real(8),intent(in) :: tn1(0:ndeg(1)+1) !< 挿入するローカルノットベクトル(xi)
+    real(8),intent(in) :: tn2(0:ndeg(2)+1) !< 挿入するローカルノットベクトル(eta)
+    real(8),intent(in) :: cp(ndim+1) !< 挿入するローカルノットベクトルに対応する制御変数
+    real(8),intent(in) :: gma !< 挿入するローカルノットベクトルに対応する重み
+    
+    integer :: i
+    type(LocallyRefinedSpline),pointer :: iter, prev, new_lrs
+
+    ! find a node after which a new node is inserted
+    nullify(prev)
+    iter=>a
+    do i=0,idx
+       !                   prev            iter
+       !(idx-1)---idx-1--->(idx)---idx--->(idx+1)
+       prev=>iter
+       iter=>iter%next
+    end do
+
+    ! create a new LR spline function
+    nullify(new_lrs)
+    !new_lrs-->iterとつなぐ
+    call set_knot(new_lrs,tn1,tn2,next=iter)
+    new_lrs%cp=cp
+    new_lrs%gma=gma
+    
+    ! prev-->new_lrs とつなぐ
+    prev%next=>new_lrs
+
+  end subroutine insert_LRspline
+
+  !> remove a LR-spline function at the given index
+  subroutine remove_LRspline(a,idx)
+    type(LocallyRefinedSpline),pointer,intent(inout) :: a
+    integer,intent(in) :: idx
+
+    integer :: i
+    type(LOcallyRefinedSpline), pointer :: iter, prev
+
+    if(idx<0) then
+       stop "aho"
+    end if
+
+    ! find a node to be removed
+    nullify(prev)
+    iter=>a
+    do i=0,idx-1
+       ! prev            iter
+       !(idx-1)--idx-1-->(idx)
+       prev=>iter
+       iter=>iter%next
+    end do
+
+    prev%next=>iter%next
+    deallocate(iter)
+
+  end subroutine remove_LRspline
+  
   !> Algorithm 1 (local xi split)
   !> \brief LR-spline aの中の LR-spline function b を xi=t により refine する
   subroutine local_split_1(a,b,idx,t)
@@ -159,101 +236,80 @@ contains
     integer,intent(inout) :: idx !< b is idx-th function in a
     real(8),intent(in) :: t !< inserted knot value
 
-    stop "kokomade"
+    real(8) :: alp(2)
+    real(8) :: tn(0:ndeg(1)+2) !xi
+    real(8) :: tn1a(0:ndeg(1)+1) !xi1
+    real(8) :: tn1b(0:ndeg(1)+1) !xi2
+    real(8) :: tn2a(0:ndeg(2)+1) !eta1
+    real(8) :: tn2b(0:ndeg(2)+1) !eta2
+    real(8) :: dis1(0:ndeg(1)+1), dis2(0:ndeg(2)+1)
+    logical :: exist
+    type(LocallyRefinedSpline),pointer :: iter
     
-!!$    real(8) :: alp(2), tn(0:ndeg(1)+2)
-!!$    real(8) :: tn1a(0:ndeg(1)+1), tn1b(0:ndeg(1)+1), tn2a(0:ndeg(2)+1), tn2b(0:ndeg(2)+1)
-!!$    real(8) :: dis1(0:ndeg(1)+1), dis2(0:ndeg(2)+1)
-!!$
-!!$    type(LocallyRefinedSplineSurface),pointer :: iter, new_knot, prev
-!!$    integer :: i
-!!$    logical :: flag
-!!$
-!!$    ! alpha
-!!$    alp(1)=1.d0
-!!$    if(t.le.son%tn1(ndeg(1))) alp(1)=(t-son%tn1(0))/(son%tn1(ndeg(1))-son%tn1(0))
-!!$    alp(2)=1.d0
-!!$    if(son%tn1(1).le.t) alp(2)=(son%tn1(ndeg(1)+1)-t)/(son%tn1(ndeg(1)+1)-son%tn1(1))
-!!$
-!!$    ! xi, xi1, xi2
-!!$    tn(0)=t
-!!$    tn(1:ndeg(1)+2)=son%tn1(:)
-!!$    tn=qsort(tn)
-!!$    ! write(*,*) tn
-!!$    tn1a(:)=tn(0:ndeg(1)+1)
-!!$    tn1b(:)=tn(1:ndeg(1)+2)
-!!$    ! write(*,*) tn1a
-!!$    ! write(*,*) tn1b
-!!$
-!!$    ! eta1, eta2
-!!$    tn2a(:)=son%tn2(:)
-!!$    tn2b(:)=son%tn2(:)
-!!$    ! write(*,*) tn2a
-!!$    ! write(*,*) tn2b
-!!$    
-!!$    ! 8-15行目
-!!$    flag=false
-!!$    iter=>root
-!!$    do while(associated(iter))
-!!$       dis1=abs(iter%tn1-tn1a)
-!!$       dis2=abs(iter%tn2-tn2a)
-!!$       if((maxval(dis1).le.tiny).and.(maxval(dis2).le.tiny))then
-!!$          flag=true
-!!$          iter%cp(:)=(iter%cp(:)*iter%gma+son%cp(:)*son%gma*alp(1))/(iter%gma+alp(1)*son%gma)
-!!$          iter%gma=iter%gma+alp(1)*son%gma
-!!$          exit
-!!$       end if
-!!$       iter=>iter%next
-!!$    end do
-!!$    if(flag.eqv.false)then ! son の「前」に local knot を追加
-!!$       nullify(new_knot)
-!!$       call set_knot(new_knot,tn1a,tn2a,next=son)
-!!$       new_knot%cp(:)=son%cp(:)
-!!$       new_knot%gma=alp(1)*son%gma
-!!$       prev=>root
-!!$       do i=1,idx-1 !注: (0)-1->(1)-2->...idx-1->(idx-1)->idx=son なので prev は(idx-1)を指す
-!!$          prev=>prev%next
-!!$       end do
-!!$       prev%next=>new_knot
-!!$       idx=idx+1 !追加した分
-!!$    end if
-!!$
-!!$    ! 16-23行目
-!!$    flag=false
-!!$    iter=>root
-!!$    do while(associated(iter))
-!!$       dis1=abs(iter%tn1-tn1b)
-!!$       dis2=abs(iter%tn2-tn2b)
-!!$       if((maxval(dis1).le.tiny).and.(maxval(dis2).le.tiny))then
-!!$          flag=true
-!!$          iter%cp(:)=(iter%cp(:)*iter%gma+son%cp(:)*son%gma*alp(2))/(iter%gma+alp(2)*son%gma)
-!!$          iter%gma=iter%gma+alp(2)*son%gma
-!!$          exit
-!!$       end if
-!!$       iter=>iter%next
-!!$    end do
-!!$    if(flag.eqv.false)then ! son の「前」に local knot を追加
-!!$       nullify(new_knot)
-!!$       call set_knot(new_knot,tn1b,tn2b,next=son)
-!!$       new_knot%cp(:)=son%cp(:)
-!!$       new_knot%gma=alp(2)*son%gma
-!!$       prev=>root
-!!$       do i=1,idx-1 !注: (0)-1->(1)-2->...idx-1->(idx-1)->idx=son なので prev は(idx-1)を指す
-!!$          prev=>prev%next
-!!$       end do
-!!$       prev%next=>new_knot
-!!$       idx=idx+1 !追加した分
-!!$    end if
-!!$
-!!$    ! 24行目
-!!$    iter=>root
-!!$    do i=0,idx-1 !注: (0)-0->(1)-1->...->(idx-1)-idx-1->(idx) なので prevは(idx-1), iterは(idx)
-!!$       prev=>iter
-!!$       iter=>iter%next
-!!$    end do
-!!$    prev%next=>iter%next
-!!$    deallocate(iter)
-!!$    idx=idx-1 !削除した分
+    ! alpha
+    alp(1)=1.d0
+    if(t.le.b%tn1(ndeg(1))) alp(1)=(t-b%tn1(0))/(b%tn1(ndeg(1))-b%tn1(0))
+    alp(2)=1.d0
+    if(b%tn1(1).le.t) alp(2)=(b%tn1(ndeg(1)+1)-t)/(b%tn1(ndeg(1)+1)-b%tn1(1))
+    ! write(*,*) alp(:)
+    
+    ! xi, xi1, xi2
+    tn(0)=t
+    tn(1:ndeg(1)+2)=b%tn1(:)
+    tn=qsort(tn)
+    ! write(*,*) tn
+    tn1a(:)=tn(0:ndeg(1)+1)
+    tn1b(:)=tn(1:ndeg(1)+2)
+    ! write(*,*) tn1a
+    ! write(*,*) tn1b
+
+    ! eta1, eta2
+    tn2a(:)=b%tn2(:)
+    tn2b(:)=b%tn2(:)
+    ! write(*,*) tn2a
+    ! write(*,*) tn2b
+
+    ! 8-15行目
+    exist=false
+    iter=>a
+    do while(associated(iter))
+       dis1=abs(iter%tn1-tn1a)
+       dis2=abs(iter%tn2-tn2a)
+       if((maxval(dis1).le.tiny).and.(maxval(dis2).le.tiny))then
+          exist=true
+          iter%cp(:)=(iter%cp(:)*iter%gma+b%cp(:)*b%gma*alp(1))/(iter%gma+alp(1)*b%gma)
+          iter%gma=iter%gma+alp(1)*b%gma
+          exit
+       end if
+       iter=>iter%next
+    end do
+    if(exist.eqv.false)then ! idxの前に local knot を追加
+       call insert_LRspline(a,idx-1,tn1a,tn2a,b%cp,alp(1)*b%gma)
+       idx=idx+1 !追加した分
+    end if
+
+    ! 16-23行目
+    exist=false
+    iter=>a
+    do while(associated(iter))
+       dis1=abs(iter%tn1-tn1b)
+       dis2=abs(iter%tn2-tn2b)
+       if((maxval(dis1).le.tiny).and.(maxval(dis2).le.tiny))then
+          exist=true
+          iter%cp(:)=(iter%cp(:)*iter%gma+b%cp(:)*b%gma*alp(2))/(iter%gma+alp(2)*b%gma)
+          iter%gma=iter%gma+alp(2)*b%gma
+          exit
+       end if
+       iter=>iter%next
+    end do
+    if(exist.eqv.false)then ! idxの前に local knot を追加
+       call insert_LRspline(a,idx-1,tn1b,tn2b,b%cp,alp(2)*b%gma)
+       idx=idx+1 !追加した分
+    end if
+
+    ! 24行目
+    call remove_LRspline(a,idx)
+    idx=idx-1 !削除した分
     
   end subroutine local_split_1
   
@@ -278,6 +334,7 @@ contains
                .and.(ml%st.le.iter%tn2(0))&
                .and.(iter%tn2(ndeg(2)+1)).le.ml%en)then
              b=iter
+             nullify(b%next)
              call local_split_1(a,b,icnt,ml%pos)
           end if
        else ! horizontal meshline insertion
@@ -291,6 +348,15 @@ contains
        iter=>iter%next
        icnt=icnt+1
     end do
+
+!!$    !test
+!!$    icnt=0
+!!$    iter=>a
+!!$    do while(associated(iter))
+!!$       write(*,*) int(iter%tn1*6),"|",int(iter%tn2*6)
+!!$       icnt=icnt+1
+!!$       iter=>iter%next
+!!$    end do
     
   end subroutine refine_LRspline
   
