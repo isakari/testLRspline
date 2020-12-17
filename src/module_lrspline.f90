@@ -245,6 +245,8 @@ contains
     real(8) :: dis1(0:ndeg(1)+1), dis2(0:ndeg(2)+1)
     logical :: exist
     type(LocallyRefinedSpline),pointer :: iter
+
+    integer :: i
     
     ! alpha
     alp(1)=1.d0
@@ -258,10 +260,16 @@ contains
     tn(1:ndeg(1)+2)=b%tn1(:)
     tn=qsort(tn)
     ! write(*,*) tn
+
+    do i=0,ndeg(1)
+       if(abs(tn(i+1)-tn(i)).le.tiny) return !knotが重複するならばsplitする必要なし
+    end do
+
     tn1a(:)=tn(0:ndeg(1)+1)
     tn1b(:)=tn(1:ndeg(1)+2)
     ! write(*,*) tn1a
     ! write(*,*) tn1b
+
 
     ! eta1, eta2
     tn2a(:)=b%tn2(:)
