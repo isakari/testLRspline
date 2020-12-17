@@ -43,46 +43,28 @@ program main
   end do
 
   ! surfaceをdraw
-  call draw_surface(lrs,10,"surface.res")
-
-  ! control point を draw
-  open(1,file="controlpoints.res")
-  iter=>lrs
-  do while(associated(iter))
-     write(1,*) iter%cp(1:3)
-     iter=>iter%next
-  end do
-  close(1)
-  
-!!$  ! refine (see Fig. 8)
-!!$  ml%idir=2
-!!$  ml%pos=3.d0/6.d0
-!!$  ml%st=1.d0/6.d0
-!!$  ml%en=5.d0/6.d0
-!!$  call refine_LRspline(lrs,ml)
+  call draw_surface(lrs,50,"surface.res")
 
   ! refine (see Fig. 8)
+  ml%idir=2
+  ml%pos=3.d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+
+  ! refine (see Fig. 11)
   ml%idir=1
   ml%pos=3.d0/6.d0
   ml%st=1.d0/6.d0
   ml%en=5.d0/6.d0
   call refine_LRspline(lrs,ml)
-  
+
   ! LRmeshをdraw
   call draw_LRmesh(lrs,"LRmesh2.res")
 
   ! surfaceをdraw
-  call draw_surface(lrs,10,"surface2.res")
-
-  ! control point を draw
-  open(1,file="controlpoints2.res")
-  iter=>lrs
-  do while(associated(iter))
-     write(1,*) iter%cp(1:3)
-     iter=>iter%next
-  end do
-  close(1)
-
+  call draw_surface(lrs,50,"surface2.res")
+  
   ! finalise
   deallocate(tn1,tn2)
   call uninit_LRspline(lrs)

@@ -270,7 +270,6 @@ contains
     ! write(*,*) tn1a
     ! write(*,*) tn1b
 
-
     ! eta1, eta2
     tn2a(:)=b%tn2(:)
     tn2b(:)=b%tn2(:)
@@ -421,6 +420,7 @@ contains
     type(LocallyRefinedSpline),pointer :: iter
     type(LocallyRefinedSpline) :: b
     integer :: icnt
+    type(MeshLine) :: ml2
 
     if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ refine_lrs"
 
@@ -451,7 +451,45 @@ contains
        icnt=icnt+1
     end do
 
-    
+    ! step 2
+    ! refine (see Fig. 8)
+    ml2%idir=2
+    ml2%pos=3.d0/6.d0
+    ml2%st=1.d0/6.d0
+    ml2%en=5.d0/6.d0
+    if(ml%idir.eq.1)then
+       icnt=0
+       iter=>a
+       do while(associated(iter))
+          if(ml2%idir.eq.2)then ! vertical meshline insertion
+             if((iter%tn1(0)<ml2%pos)& !ml2がiterのsupportを分断するなら
+                  .and.(ml2%pos<iter%tn1(ndeg(1)+1))&
+                  .and.(ml2%st.le.iter%tn2(0))&
+                  .and.(iter%tn2(ndeg(2)+1)).le.ml2%en&
+                  .and.(abs(iter%tn1(0)-ml2%pos).gt.tiny)&
+                  .and.(abs(iter%tn1(1)-ml2%pos).gt.tiny)&
+                  .and.(abs(iter%tn1(2)-ml2%pos).gt.tiny)&
+                  .and.(abs(iter%tn1(3)-ml2%pos).gt.tiny))then
+                b=iter
+                nullify(b%next)
+                call local_split_1(a,b,icnt,ml2%pos)
+             end if
+          else ! horizontal meshline insertion
+             stop "aho"
+             if((iter%tn2(0)<ml2%pos)& !ml2がiterのsupportを分断するなら
+                  .and.(ml2%pos<iter%tn2(ndeg(2)+1))&
+                  .and.(ml2%st.le.iter%tn1(0))&
+                  .and.(iter%tn1(ndeg(1)+1)).le.ml2%en)then
+                b=iter
+                nullify(b%next)
+                call local_split_2(a,b,icnt,ml2%pos)
+             end if
+          end if
+          iter=>iter%next
+          icnt=icnt+1
+       end do
+    end if
+
   end subroutine refine_LRspline
   
 
@@ -575,7 +613,7 @@ contains
              if(abs(b1).le.tiny) goto 1
              b2=basis_func(ndeg(2),iter%tn2,t2)
              if(abs(b2).le.tiny) goto 1
-             c(:)=c(:)+b1*b2*iter%cp(:)
+             c(:)=c(:)+b1*b2*iter%gma*iter%cp(:)
 1            iter=>iter%next
           end do
           write(1,*) c(:)
