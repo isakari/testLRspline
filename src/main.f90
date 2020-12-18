@@ -31,9 +31,6 @@ program main
   ! tensor mesh の local knot を設定 = Bspline の knot
   call set_Bspline(lrs,tn1,tn2)
   
-  ! LRmeshをdraw
-  call draw_LRmesh(lrs,"LRmesh.res")
-
   ! 適当なsurfaceを設定
   call set_greville(lrs)
   iter=>lrs
@@ -42,7 +39,9 @@ program main
      iter=>iter%next
   end do
 
-  ! surfaceをdraw
+  ! draw
+  call draw_LRmesh(lrs,"LRmesh.res")
+  call draw_controlpoints(lrs,"controlpoints.res")
   call draw_surface(lrs,50,"surface.res")
 
   ! refine (see Fig. 8)
@@ -51,18 +50,52 @@ program main
   ml%st=1.d0/6.d0
   ml%en=5.d0/6.d0
   call refine_LRspline(lrs,ml)
-
   ! refine (see Fig. 11)
   ml%idir=1
-  ml%pos=3.d0/6.d0
+  ml%pos=3.0d0/6.d0
   ml%st=1.d0/6.d0
   ml%en=5.d0/6.d0
   call refine_LRspline(lrs,ml)
-
-  ! LRmeshをdraw
+  ! refine (see Fig. 11)
+  ml%idir=1
+  ml%pos=2.9d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+  ! refine (see Fig. 11)
+  ml%idir=1
+  ml%pos=3.1d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+  ! refine (see Fig. 11)
+  ml%idir=1
+  ml%pos=1.5d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+  ! refine (see Fig. 11)
+  ml%idir=1
+  ml%pos=1.4d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+  ! refine (see Fig. 11)
+  ml%idir=1
+  ml%pos=4.5d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+  ! refine (see Fig. 11)
+  ml%idir=1
+  ml%pos=4.6d0/6.d0
+  ml%st=1.d0/6.d0
+  ml%en=5.d0/6.d0
+  call refine_LRspline(lrs,ml)
+  
+  ! draw
   call draw_LRmesh(lrs,"LRmesh2.res")
-
-  ! surfaceをdraw
+  call draw_controlpoints(lrs,"controlpoints2.res")
   call draw_surface(lrs,50,"surface2.res")
   
   ! finalise

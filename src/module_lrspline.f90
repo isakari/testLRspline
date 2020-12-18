@@ -10,7 +10,7 @@ module module_LRspline
        set_Bspline, &
        set_greville, &
        refine_LRspline, &
-       draw_LRmesh, draw_surface
+       draw_LRmesh, draw_controlpoints, draw_surface
   
   integer,parameter :: ndeg(ndim)=[2,2] !< B-splineの次数
   integer :: ncp(0:ndim) !< 基底関数の数-1
@@ -247,6 +247,10 @@ contains
     type(LocallyRefinedSpline),pointer :: iter
 
     integer :: i
+
+    do i=0,ndeg(1)+1
+       if(abs(b%tn1(i)-t).le.tiny) return !既存のノットは追加しない
+    end do
     
     ! alpha
     alp(1)=1.d0
@@ -260,10 +264,6 @@ contains
     tn(1:ndeg(1)+2)=b%tn1(:)
     tn=qsort(tn)
     ! write(*,*) tn
-
-    do i=0,ndeg(1)
-       if(abs(tn(i+1)-tn(i)).le.tiny) return !knotが重複するならばsplitする必要なし
-    end do
 
     tn1a(:)=tn(0:ndeg(1)+1)
     tn1b(:)=tn(1:ndeg(1)+2)
@@ -290,7 +290,7 @@ contains
        end if
        iter=>iter%next
     end do
-    if(exist.eqv.false)then ! idxの前に local knot を追加
+    if(.not.exist)then ! idxの前に local knot を追加
        call insert_LRspline(a,idx-1,tn1a,tn2a,b%cp,alp(1)*b%gma)
        idx=idx+1 !追加した分
     end if
@@ -309,7 +309,7 @@ contains
        end if
        iter=>iter%next
     end do
-    if(exist.eqv.false)then ! idxの前に local knot を追加
+    if(.not.exist)then ! idxの前に local knot を追加
        call insert_LRspline(a,idx-1,tn1b,tn2b,b%cp,alp(2)*b%gma)
        idx=idx+1 !追加した分
     end if
@@ -340,6 +340,10 @@ contains
 
     integer :: i
 
+    do i=0,ndeg(1)+1
+       if(abs(b%tn2(i)-t).le.tiny) return !既存のノットは追加しない
+    end do
+    
     ! alpha
     alp(1)=1.d0
     if(t.le.b%tn2(ndeg(1))) alp(1)=(t-b%tn2(0))/(b%tn2(ndeg(2))-b%tn2(0))
@@ -352,10 +356,6 @@ contains
     tn(1:ndeg(2)+2)=b%tn2(:)
     tn=qsort(tn)
     ! write(*,*) tn
-
-    do i=0,ndeg(2)
-       if(abs(tn(i+1)-tn(i)).le.tiny) return !knotが重複するならばsplitする必要なし
-    end do
 
     tn2a(:)=tn(0:ndeg(2)+1)
     tn2b(:)=tn(1:ndeg(2)+2)
@@ -382,7 +382,7 @@ contains
        end if
        iter=>iter%next
     end do
-    if(exist.eqv.false)then ! idxの前に local knot を追加
+    if(.not.exist)then ! idxの前に local knot を追加
        call insert_LRspline(a,idx-1,tn1a,tn2a,b%cp,alp(1)*b%gma)
        idx=idx+1 !追加した分
     end if
@@ -401,7 +401,7 @@ contains
        end if
        iter=>iter%next
     end do
-    if(exist.eqv.false)then ! idxの前に local knot を追加
+    if(.not.exist)then ! idxの前に local knot を追加
        call insert_LRspline(a,idx-1,tn1b,tn2b,b%cp,alp(2)*b%gma)
        idx=idx+1 !追加した分
     end if
@@ -518,24 +518,24 @@ contains
     
     ! quick return if possible
     if(np.gt.0)then
-       chk=.true.  ! 左端
+       chk=true  ! 左端
        do i=0,np-1
            !local knotの左p+1個が重なっているかcheck
-          chk=and(chk,abs(tn(i+1)-tn(i)).le.tiny)
+          chk=chk.and.(abs(tn(i+1)-tn(i)).le.tiny)
        end do
        !local knotの左p+1個が重なっていてかつ左端の点の基底を計算する
-       if((chk.eqv..true.).and.(abs(t).le.tiny))then
+       if(chk.and.(abs(t).le.tiny))then
           ret=1.d0
           return
        end if
 
-       chk=.true. ! 右端
+       chk=true ! 右端
        do i=1,np
           !local knotの右p+1個が重なっているかcheck
-          chk=and(chk,abs(tn(i+1)-tn(i)).le.tiny)
+          chk=chk.and.(abs(tn(i+1)-tn(i)).le.tiny)
        end do
        !local knotの右p+1個が重なっていてかつ右端の点の基底を計算する
-       if((chk.eqv..true.).and.(abs(t-1.d0).le.tiny))then 
+       if(chk.and.(abs(t-1.d0).le.tiny))then 
           ret=1.d0
           return
        end if
@@ -598,6 +598,23 @@ contains
     close(1)
     
   end subroutine draw_LRmesh
+
+  !> draw control points
+  subroutine draw_controlpoints(a,fn)
+    type(LocallyRefinedSpline),pointer,intent(in) :: a
+    character(*),intent(in) :: fn
+
+    type(LocallyRefinedSpline),pointer :: iter
+    
+    open(1,file=fn)
+    iter=>a
+    do while(associated(iter))
+       write(1,*) iter%cp
+       iter=>iter%next
+    end do
+    close(1)
+    
+  end subroutine draw_controlpoints
 
   !> draw surface
   !> \brief gnuplotでp file
