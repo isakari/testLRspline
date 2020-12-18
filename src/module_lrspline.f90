@@ -1,11 +1,11 @@
 module module_LRspline
   use module_globals
+  use module_meshline
   implicit none
 
   private
   public ndeg, ncp, &
        LocallyRefinedSpline, &
-       MeshLine, &
        init_LRspline, uninit_LRspline, &
        set_Bspline, &
        set_greville, &
@@ -24,16 +24,6 @@ module module_LRspline
      type(LocallyRefinedSpline),pointer :: next
   end type LocallyRefinedSpline
 
-  !> mesh line
-  !> \brief if idir=1, meshline is (st,pos)-->(en,pos)
-  !> \brief if idir=2, meshline is (pos,st)-->(pos,en)
-  type MeshLine
-     integer :: idir !< meshlineの方向 1(=x) or 2(=y)
-     real(8) :: pos !< meshlineの位置
-     real(8) :: st !< meshlineの始点
-     real(8) :: en !< meshlineの終点
-  end type MeshLine
-
 contains
 
   !> initialise LRspline
@@ -42,7 +32,7 @@ contains
     nullify(a)
   end subroutine init_LRspline
 
-  !> uninitialise the list 
+  !> uninitialise LRspline
   subroutine uninit_LRspline(a)
     type(LocallyRefinedSpline),pointer,intent(inout) :: a !< LRspline to be destroyed
 
@@ -207,7 +197,7 @@ contains
     integer,intent(in) :: idx
 
     integer :: i
-    type(LOcallyRefinedSpline), pointer :: iter, prev
+    type(LocallyRefinedSpline), pointer :: iter, prev
 
     if(idx<0) then
        stop "aho"
@@ -421,25 +411,26 @@ contains
 
     integer :: i
 
-    if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ is_split"
-    
-    if(ml%idir.eq.2)then
-       res=(tn1(0)<ml%pos)&
-            .and.(ml%pos<tn1(ndeg(1)+1))&
-            .and.(ml%st.le.tn2(0))&
-            .and.(tn2(ndeg(2)+1).le.ml%en)
-       do i=0,ndeg(1)
-          res=res.and.abs(tn1(i)-ml%pos).gt.tiny
-       end do
-    else
-       res=(tn2(0)<ml%pos)&
-            .and.(ml%pos<tn2(ndeg(2)+1))&
-            .and.(ml%st.le.tn1(0))&
-            .and.(tn1(ndeg(1)+1).le.ml%en)
-       do i=0,ndeg(2)
-          res=res.and.abs(tn2(i)-ml%pos).gt.tiny
-       end do
-    end if
+    stop "is_split"
+!!$    if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ is_split"
+!!$    
+!!$    if(ml%idir.eq.2)then
+!!$       res=(tn1(0)<ml%pos)&
+!!$            .and.(ml%pos<tn1(ndeg(1)+1))&
+!!$            .and.(ml%st.le.tn2(0))&
+!!$            .and.(tn2(ndeg(2)+1).le.ml%en)
+!!$       do i=0,ndeg(1)
+!!$          res=res.and.abs(tn1(i)-ml%pos).gt.tiny
+!!$       end do
+!!$    else
+!!$       res=(tn2(0)<ml%pos)&
+!!$            .and.(ml%pos<tn2(ndeg(2)+1))&
+!!$            .and.(ml%st.le.tn1(0))&
+!!$            .and.(tn1(ndeg(1)+1).le.ml%en)
+!!$       do i=0,ndeg(2)
+!!$          res=res.and.abs(tn2(i)-ml%pos).gt.tiny
+!!$       end do
+!!$    end if
     
   end function is_split
   
@@ -453,52 +444,54 @@ contains
     integer :: icnt
     type(MeshLine) :: ml2
 
-    if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ refine_lrs"
-
-    ! step1
-    icnt=0
-    iter=>a
-    do while(associated(iter))
-       if(ml%idir.eq.2)then ! vertical meshline insertion
-          if(is_split(ml,iter%tn1,iter%tn2))then !mlがiterを分断するなら
-             b=iter
-             call local_split_1(a,b,icnt,ml%pos)
-          end if
-       else ! horizontal meshline insertion
-          if(is_split(ml,iter%tn1,iter%tn2))then !mlがiterを分断するなら
-             b=iter
-             call local_split_2(a,b,icnt,ml%pos)
-          end if
-       end if
-       iter=>iter%next
-       icnt=icnt+1
-    end do
-
-    ! step 2
-    ! refine (see Fig. 8)
-    ml2%idir=2
-    ml2%pos=3.d0/6.d0
-    ml2%st=1.d0/6.d0
-    ml2%en=5.d0/6.d0
-    if(ml%idir.eq.1)then
-       icnt=0
-       iter=>a
-       do while(associated(iter))
-          if(ml2%idir.eq.2)then ! vertical meshline insertion
-             if(is_split(ml2,iter%tn1,iter%tn2))then !ml2がiterのsupportを分断するなら
-                b=iter
-                call local_split_1(a,b,icnt,ml2%pos)
-             end if
-          else ! horizontal meshline insertion
-             if(is_split(ml2,iter%tn1,iter%tn2))then !ml2がiterのsupportを分断するなら
-                b=iter
-                call local_split_2(a,b,icnt,ml2%pos)
-             end if
-          end if
-          iter=>iter%next
-          icnt=icnt+1
-       end do
-    end if
+    stop "refine_LRspline"
+    
+!!$    if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ refine_lrs"
+!!$
+!!$    ! step1
+!!$    icnt=0
+!!$    iter=>a
+!!$    do while(associated(iter))
+!!$       if(ml%idir.eq.2)then ! vertical meshline insertion
+!!$          if(is_split(ml,iter%tn1,iter%tn2))then !mlがiterを分断するなら
+!!$             b=iter
+!!$             call local_split_1(a,b,icnt,ml%pos)
+!!$          end if
+!!$       else ! horizontal meshline insertion
+!!$          if(is_split(ml,iter%tn1,iter%tn2))then !mlがiterを分断するなら
+!!$             b=iter
+!!$             call local_split_2(a,b,icnt,ml%pos)
+!!$          end if
+!!$       end if
+!!$       iter=>iter%next
+!!$       icnt=icnt+1
+!!$    end do
+!!$
+!!$    ! step 2
+!!$    ! refine (see Fig. 8)
+!!$    ml2%idir=2
+!!$    ml2%pos=3.d0/6.d0
+!!$    ml2%st=1.d0/6.d0
+!!$    ml2%en=5.d0/6.d0
+!!$    if(ml%idir.eq.1)then
+!!$       icnt=0
+!!$       iter=>a
+!!$       do while(associated(iter))
+!!$          if(ml2%idir.eq.2)then ! vertical meshline insertion
+!!$             if(is_split(ml2,iter%tn1,iter%tn2))then !ml2がiterのsupportを分断するなら
+!!$                b=iter
+!!$                call local_split_1(a,b,icnt,ml2%pos)
+!!$             end if
+!!$          else ! horizontal meshline insertion
+!!$             if(is_split(ml2,iter%tn1,iter%tn2))then !ml2がiterのsupportを分断するなら
+!!$                b=iter
+!!$                call local_split_2(a,b,icnt,ml2%pos)
+!!$             end if
+!!$          end if
+!!$          iter=>iter%next
+!!$          icnt=icnt+1
+!!$       end do
+!!$    end if
 
   end subroutine refine_LRspline
   
