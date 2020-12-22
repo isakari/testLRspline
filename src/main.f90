@@ -5,22 +5,22 @@ program main
   use module_LRspline
   implicit none
 
-  !> global knot
+  !> global tensor knot
   real(8),allocatable :: tn1(:), tn2(:)
 
   !> LR-spline
-  type(LocallyRefinedSpline),pointer :: lrs
+  type(LocallyRefinedSpline),pointer :: lrs_
 
   !> Mesh Line
-  type(MeshLine),pointer :: ml
-
-  ! local variables
-  type(LocallyRefinedSpline),pointer :: lrs_
   type(MeshLine),pointer :: ml_
 
+  ! local variables
+  type(LocallyRefinedSpline),pointer :: lrs
+  type(MeshLine),pointer :: ml
+
   ! initialise
-  call init_LRspline(lrs)
-  call init_meshline(ml)
+  call init_LRspline(lrs_)
+  call init_meshline(ml_)
   
   ! tensor mesh = Bspline の global knotを設定
   ncp(1)=6
@@ -32,60 +32,55 @@ program main
   tn2=[0.d0,0.d0,0.d0,1.d0,2.d0,4.d0,5.d0,6.d0,6.d0,6.d0]/6.d0
 
   ! tensor mesh の local knot を設定 = Bspline の knot
-  call set_Bspline(lrs,tn1,tn2)
-  
+  call set_Bspline(lrs_,tn1,tn2)
+
   ! 適当なsurfaceを設定
-  call set_greville(lrs)
-  lrs_=>lrs
-  do while(associated(lrs_))
-     lrs_%cp(3)=cos(2.d0*pi*lrs_%cp(1))*sin(2.d0*pi*lrs_%cp(2))
-     lrs_=>lrs_%next
+  call set_Greville(lrs_)
+  lrs=>lrs_
+  do while(associated(lrs))
+     lrs%cp(3)=cos(2.d0*pi*lrs%cp(1))*sin(2.d0*pi*lrs%cp(2))
+     lrs=>lrs%next
   end do
 
   ! draw itinial Bspline
-  call draw_LRmesh(lrs,"LRmesh.res")
-  call draw_controlpoints(lrs,"controlpoints.res")
-  call draw_surface(lrs,50,"surface.res")
+  call draw_LRmesh(lrs_,"LRmesh.res")
+  call draw_controlpoints(lrs_,"controlpoints.res")
+  call draw_surface(lrs_,50,"surface.res")
 
-!!!!!!!!!!!!!!!!!! test !!!!!!!!!!!!!!!!!!!
-  write(*,*) "kokokara!!!"
   ! insert meshline
-  call append_meshline(ml,2,3.0d0/6.d0,0.d0/6.d0,1.d0/6.d0)
-  call append_meshline(ml,2,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml,2,3.0d0/6.d0,5.d0/6.d0,6.d0/6.d0)
-  call append_meshline(ml,1,3.0d0/6.d0,5.d0/6.d0,6.d0/6.d0)
-  call append_meshline(ml,1,3.0d0/6.d0,0.d0/6.d0,1.d0/6.d0)
-  call append_meshline(ml,1,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml,1,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml,2,2.9d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml,2,2.8d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml,2,2.8d0/6.d0,0.d0/6.d0,1.d0/6.d0)
-  call append_meshline(ml,1,1.5d0/6.d0,1.d0/6.d0,2.9/6.d0)
-  call append_meshline(ml,1,1.5d0/6.d0,5.d0/6.d0,6.d0/6.d0)
-  call append_meshline(ml,1,1.5d0/6.d0,2.9/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,2,3.0d0/6.d0,0.d0/6.d0,1.d0/6.d0)
+  call append_meshline(ml_,2,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,2,3.0d0/6.d0,5.d0/6.d0,6.d0/6.d0)
+  call append_meshline(ml_,1,3.0d0/6.d0,5.d0/6.d0,6.d0/6.d0)
+  call append_meshline(ml_,1,3.0d0/6.d0,0.d0/6.d0,1.d0/6.d0)
+  call append_meshline(ml_,1,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,1,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,2,2.9d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,2,2.8d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,2,2.8d0/6.d0,0.d0/6.d0,1.d0/6.d0)
+  call append_meshline(ml_,1,1.5d0/6.d0,1.d0/6.d0,2.9/6.d0)
+  call append_meshline(ml_,1,1.5d0/6.d0,5.d0/6.d0,6.d0/6.d0)
+  call append_meshline(ml_,1,1.5d0/6.d0,2.9/6.d0,5.d0/6.d0)
   
   open(1,file="meshline.res")
-  ml_=>ml
-  do while(associated(ml_))
-     if(ml_%idir.eq.1)then !horizontal meshline
-        write(1,*) ml_%st,ml_%pos
-        write(1,*) ml_%en,ml_%pos
+  ml=>ml_
+  do while(associated(ml))
+     if(ml%idir.eq.1)then !horizontal meshline
+        write(1,*) ml%st,ml%pos
+        write(1,*) ml%en,ml%pos
         write(1,*); write(1,*)
      else !vertical meshline
-        write(1,*) ml_%pos,ml_%st
-        write(1,*) ml_%pos,ml_%en
+        write(1,*) ml%pos,ml%st
+        write(1,*) ml%pos,ml%en
         write(1,*); write(1,*)
      end if
-     ml_=>ml_%next
+     ml=>ml%next
   end do
   close(1)
     
-  write(*,*) "kokokmade!!!"
-!!!!!!!!!!!!!!!!!! test !!!!!!!!!!!!!!!!!!!
-  
   ! finalise
   deallocate(tn1,tn2)
-  call uninit_meshline(ml)
-  call uninit_LRspline(lrs)
+  call uninit_meshline(ml_)
+  call uninit_LRspline(lrs_)
 
 end program main

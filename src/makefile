@@ -6,7 +6,7 @@ USE_OPENMP = 1
 DBG = 1
 OBJS = module_globals.o \
 	module_meshline.o \
-	module_lrspline.o \
+	module_LRspline.o \
 	main.o
 GFORTRAN = gfortran
 IFORT = ifort
