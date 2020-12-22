@@ -47,37 +47,25 @@ program main
   call draw_controlpoints(lrs_,"controlpoints.res")
   call draw_surface(lrs_,50,"surface.res")
 
-  ! insert meshline
-  call append_meshline(ml_,2,3.0d0/6.d0,0.d0/6.d0,1.d0/6.d0)
-  call append_meshline(ml_,2,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml_,2,3.0d0/6.d0,5.d0/6.d0,6.d0/6.d0)
-  call append_meshline(ml_,1,3.0d0/6.d0,5.d0/6.d0,6.d0/6.d0)
-  call append_meshline(ml_,1,3.0d0/6.d0,0.d0/6.d0,1.d0/6.d0)
-  call append_meshline(ml_,1,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml_,1,3.0d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml_,2,2.9d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml_,2,2.8d0/6.d0,1.d0/6.d0,5.d0/6.d0)
-  call append_meshline(ml_,2,2.8d0/6.d0,0.d0/6.d0,1.d0/6.d0)
-  call append_meshline(ml_,1,1.5d0/6.d0,1.d0/6.d0,2.9/6.d0)
-  call append_meshline(ml_,1,1.5d0/6.d0,5.d0/6.d0,6.d0/6.d0)
-  call append_meshline(ml_,1,1.5d0/6.d0,2.9/6.d0,5.d0/6.d0)
-  
-  open(1,file="meshline.res")
+  ! set meshlines
+  call append_meshline(ml_,1,3.d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,2,3.d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+
+  ! draw meshline
+  call draw_meshline(ml_,"meshline.res")
+
+  ! refine LR-splines
   ml=>ml_
   do while(associated(ml))
-     if(ml%idir.eq.1)then !horizontal meshline
-        write(1,*) ml%st,ml%pos
-        write(1,*) ml%en,ml%pos
-        write(1,*); write(1,*)
-     else !vertical meshline
-        write(1,*) ml%pos,ml%st
-        write(1,*) ml%pos,ml%en
-        write(1,*); write(1,*)
-     end if
+     call refine_LRspline(lrs_,ml_,ml)
      ml=>ml%next
   end do
-  close(1)
-    
+
+  ! draw refined LR-spline
+  call draw_LRmesh(lrs_,"LRmesh2.res")
+  call draw_controlpoints(lrs_,"controlpoints2.res")
+  call draw_surface(lrs_,50,"surface2.res")
+  
   ! finalise
   deallocate(tn1,tn2)
   call uninit_meshline(ml_)

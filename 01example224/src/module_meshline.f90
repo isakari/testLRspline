@@ -5,7 +5,8 @@ module module_meshline
   private
   public MeshLine, &
        init_meshline, uninit_meshline, &
-       append_meshline
+       append_meshline, &
+       draw_meshline
 
   !> mesh line
   !> \brief if idir=1, meshline is (st,pos)-->(en,pos)
@@ -210,5 +211,31 @@ contains
     end if
 
   end subroutine append_meshline
-  
+
+  !> draw meshline
+  !> \brief gnuplotで p fn w lp
+  subroutine draw_meshline(ml_,fn)
+    type(MeshLine),pointer,intent(in) :: ml_
+    character(*),intent(in) :: fn
+
+    type(MeshLine),pointer :: ml
+    
+    open(1,file=fn)
+    ml=>ml_
+    do while(associated(ml))
+       if(ml%idir.eq.1)then !horizontal meshline
+          write(1,*) ml%st,ml%pos
+          write(1,*) ml%en,ml%pos
+          write(1,*); write(1,*)
+       else !vertical meshline
+          write(1,*) ml%pos,ml%st
+          write(1,*) ml%pos,ml%en
+          write(1,*); write(1,*)
+       end if
+       ml=>ml%next
+    end do
+    close(1)
+    
+  end subroutine draw_meshline
+    
 end module module_meshline
