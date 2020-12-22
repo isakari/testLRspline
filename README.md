@@ -17,4 +17,5 @@
 # 02diagonal
 diagonal structured refinement を再現する。(to be implemented)
 
+# Reference
 [1] Kjetil André, Johannessen, Trond Kvamsdal, and Tor Dokken, Isogeometric analysis using LR B-splines, Computer Methods in Applied Mechanics and Engineering, Volume 269, 1 February 2014, Pages 471-514
