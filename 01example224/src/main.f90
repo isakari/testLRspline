@@ -48,7 +48,7 @@ program main
   call draw_surface(lrs_,50,"surface.res")
 
   ! set meshlines
-  call append_meshline(ml_,1,3.d0/6.d0,1.d0/6.d0,5.d0/6.d0)
+  call append_meshline(ml_,1,3.d0/6.d0,0.d0/6.d0,5.d0/6.d0)
   call append_meshline(ml_,2,3.d0/6.d0,1.d0/6.d0,5.d0/6.d0)
 
   ! draw meshline
