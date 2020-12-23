@@ -569,22 +569,17 @@ contains
     character(*),intent(in) :: fn
 
     type(LocallyRefinedSpline),pointer :: lrs
-    integer :: i, j
     
     lrs=>lrs_
     open(1,file=fn)
     do while(associated(lrs))
-       do j=0,ndeg(2)
-          do i=0,ndeg(1)
-             write(1,*) lrs%tn1(i  ),lrs%tn2(j  )
-             write(1,*) lrs%tn1(i+1),lrs%tn2(j  )
-             write(1,*) lrs%tn1(i+1),lrs%tn2(j+1)
-             write(1,*) lrs%tn1(i  ),lrs%tn2(j+1)
-             write(1,*) lrs%tn1(i  ),lrs%tn2(j  )
-             write(1,*)
-             write(1,*)
-          end do
-       end do
+       write(1,*) lrs%tn1(0),lrs%tn2(0)
+       write(1,*) lrs%tn1(ndeg(1)+1),lrs%tn2(0)
+       write(1,*) lrs%tn1(ndeg(1)+1),lrs%tn2(ndeg(2)+1)
+       write(1,*) lrs%tn1(0),lrs%tn2(ndeg(2)+1)
+       write(1,*) lrs%tn1(0),lrs%tn2(0)
+       write(1,*)
+       write(1,*)
        lrs=>lrs%next
     end do
     close(1)
