@@ -50,7 +50,7 @@ program main
   call draw_controlpoints(lrs_,"controlpoints.res")
   call draw_surface(lrs_,50,"surface.res")
 
-  do j=1,5 !level 5 まで
+  do j=1,7 !level 8 まで
      ! set meshlines
      lrs=>lrs_
      do while(associated(lrs))

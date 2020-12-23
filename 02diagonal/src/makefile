@@ -1,9 +1,9 @@
 TARGET = ../bin/a.out
 
-FC = ifort
+FC = gfortran
 USE_OPENMP = 1
-OPT = 1
-# DBG = 1
+# OPT = 1
+DBG = 1
 OBJS = module_globals.o \
 	module_meshline.o \
 	module_LRspline.o \
