@@ -418,20 +418,20 @@ contains
     if(.not.(ml%idir.eq.1.or.ml%idir.eq.2)) stop "Error in ml%idir @ is_split"
     
     if(ml%idir.eq.2)then
-       res=(tn1(0)<ml%pos)&
-            .and.(ml%pos<tn1(ndeg(1)+1))&
-            .and.(ml%st.le.tn2(0))&
-            .and.(tn2(ndeg(2)+1).le.ml%en)
+       res=(tn1(0)<ml%pos); if(.not.res) return
+       res=res.and.(ml%pos<tn1(ndeg(1)+1)); if(.not.res) return
+       res=res.and.(ml%st.le.tn2(0)); if(.not.res) return
+       res=res.and.(tn2(ndeg(2)+1).le.ml%en); if(.not.res) return
        do i=0,ndeg(1)
-          res=res.and.abs(tn1(i)-ml%pos).gt.tiny
+          res=res.and.abs(tn1(i)-ml%pos).gt.tiny; if(.not.res) return
        end do
     else
-       res=(tn2(0)<ml%pos)&
-            .and.(ml%pos<tn2(ndeg(2)+1))&
-            .and.(ml%st.le.tn1(0))&
-            .and.(tn1(ndeg(1)+1).le.ml%en)
+       res=(tn2(0)<ml%pos)
+       res=res.and.(ml%pos<tn2(ndeg(2)+1)); if(.not.res) return
+       res=res.and.(ml%st.le.tn1(0)); if(.not.res) return
+       res=res.and.(tn1(ndeg(1)+1).le.ml%en); if(.not.res) return
        do i=0,ndeg(2)
-          res=res.and.abs(tn2(i)-ml%pos).gt.tiny
+          res=res.and.abs(tn2(i)-ml%pos).gt.tiny; if(.not.res) return
        end do
     end if
     
@@ -472,7 +472,7 @@ contains
     ! step 2
     ! refine (see Fig. 8)
     ml2=>ml_
-    do while(associated(ml2))
+    do while(.not.associated(ml2,ml))
        icnt=0
        lrs=>lrs_
        do while(associated(lrs))
@@ -569,7 +569,9 @@ contains
     character(*),intent(in) :: fn
 
     type(LocallyRefinedSpline),pointer :: lrs
-    
+    integer :: icnt
+
+    icnt=0
     lrs=>lrs_
     open(1,file=fn)
     do while(associated(lrs))
@@ -580,9 +582,12 @@ contains
        write(1,*) lrs%tn1(0),lrs%tn2(0)
        write(1,*)
        write(1,*)
+       icnt=icnt+1
        lrs=>lrs%next
     end do
     close(1)
+
+    write(*,*) "#LR-splines", icnt
 
   end subroutine draw_LRmesh
     
