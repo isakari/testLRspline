@@ -657,6 +657,8 @@ contains
     lrs=>lrs_
     do while(associated(lrs))
        write(1,*) lrs%cp
+       write(1,*)
+       write(1,*)
        lrs=>lrs%next
     end do
     close(1)

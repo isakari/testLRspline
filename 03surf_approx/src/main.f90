@@ -24,8 +24,8 @@ program main
   ! local variables
   type(LocallyRefinedSpline),pointer :: lrs
   type(MeshLine),pointer :: ml
-  integer :: i, j, k, icnt, keast, kwest, ksouth, knorth, k0, info, k1, k2, k3
-  real(8) :: pos, t1, t2, c(ndim+1), b1, b2
+  integer :: i, j, k, icnt, keast, kwest, ksouth, knorth, k0, info
+  real(8) :: pos, t1, t2
   logical :: diag
   integer,allocatable :: ipiv(:)
   real(8),allocatable :: bmat(:,:), d1bmat(:,:), d2bmat(:,:), cv(:,:), amat(:,:)
@@ -36,7 +36,6 @@ program main
   read(1,*) ngrid(2)
   ngrid(0)=(ngrid(1)+1)*(ngrid(2)+1) !設計領域内のgird点の数
   ngrid(-1)=(ngrid(1)+3)*(ngrid(2)+3) !設計領域+バッファ領域のgrid点の数
-  write(*,*)ngrid(:)
   allocate(ff(ndim+1,ngrid(-1)))
   k=1
   do j=-1,ngrid(2)+1
@@ -64,7 +63,7 @@ program main
      do i=0,ngrid(1)
         k=i+j*(ngrid(1)+1)+1
         f(:,k)=ff(:,igrid(k))
-        write(11,*) f(:,k)
+        ! write(11,*) f(:,k)
      end do
   end do
 
@@ -74,13 +73,13 @@ program main
         k0=i+j*(ngrid(1)+1)+1
         keast=i+1+(j+1)*(ngrid(1)+3)+2
         kwest=i-1+(j+1)*(ngrid(1)+3)+2
-        ksouth=i+(j+1+1)*(ngrid(1)+3)+2
-        knorth=i+(j+1-1)*(ngrid(1)+3)+2
-        df(1,:,k0)=(ff(:,keast)-ff(:,kwest))/(ff(1,keast)-ff(1,kwest))
-        df(2,:,k0)=(ff(:,knorth)-ff(:,ksouth))/(ff(2,knorth)-ff(2,ksouth))
+        ksouth=i+(j+1-1)*(ngrid(1)+3)+2
+        knorth=i+(j+1+1)*(ngrid(1)+3)+2
+        df(1,:,k0)=(ff(:,keast)-ff(:,kwest))/(2.d0/dble(ngrid(1))) !中央
+        df(2,:,k0)=(ff(:,knorth)-ff(:,ksouth))/(2.d0/dble(ngrid(2))) !差分
         if(abs(df(1,3,k0)).gt.10.d0) df(1,3,k0)=0.d0 !不連続点の
         if(abs(df(2,3,k0)).gt.10.d0) df(2,3,k0)=0.d0 !勾配はゼロにしておく
-        write(12,*) f(:,k0),df(1,:,k0),df(2,:,k0)
+        ! write(12,*) f(:,k0),df(1,:,k0),df(2,:,k0)
      end do
   end do
   
@@ -89,8 +88,8 @@ program main
   call init_meshline(ml_)
   
   ! tensor mesh = Bspline の global knotを設定
-  ncp(1)=10
-  ncp(2)=10
+  ncp(1)=5
+  ncp(2)=5
   ncp(0)=(ncp(1)+1)*(ncp(2)+1)
   allocate(tn1(0:ncp(1)+ndeg(1)+1))
   allocate(tn2(0:ncp(2)+ndeg(2)+1))
@@ -106,7 +105,7 @@ program main
      lrs=>lrs%next
   end do
   
-  do j=1,2 !level 5 まで
+  do j=1,4 !level 4 まで
      ! set meshlines
      lrs=>lrs_
      do while(associated(lrs))
@@ -166,36 +165,34 @@ program main
            k=i+j*(ngrid(1)+1)+1
            t1=dble(i)/dble(ngrid(1))
            t2=dble(j)/dble(ngrid(2))
-           bmat(k,icnt)=basis_func(ndeg(1),lrs%tn1,t1)*basis_func(ndeg(2),lrs%tn2,t2)
-           d1bmat(k,icnt)=diff_basis_func(ndeg(1),lrs%tn1,t1)*basis_func(ndeg(2),lrs%tn2,t2)
-           d2bmat(k,icnt)=basis_func(ndeg(1),lrs%tn1,t1)*diff_basis_func(ndeg(2),lrs%tn2,t2)
+           bmat(k,icnt)=lrs%gma*basis_func(ndeg(1),lrs%tn1,t1)*basis_func(ndeg(2),lrs%tn2,t2)
+           d1bmat(k,icnt)=lrs%gma*diff_basis_func(ndeg(1),lrs%tn1,t1)*basis_func(ndeg(2),lrs%tn2,t2)
+           d2bmat(k,icnt)=lrs%gma*basis_func(ndeg(1),lrs%tn1,t1)*diff_basis_func(ndeg(2),lrs%tn2,t2)
         end do
      end do
      icnt=icnt+1; lrs=>lrs%next
   end do
   amat=matmul(transpose(bmat),bmat)&
-       +matmul(transpose(d1bmat),d1bmat)/dble(ncp(1)-ndeg(1)+1)**2*0d0&
-       +matmul(transpose(d2bmat),d2bmat)/dble(ncp(2)-ndeg(2)+1)**2*0d0
+       +matmul(transpose(d1bmat),d1bmat)/dble(ncp(1)-ndeg(1)+1)**2*0.02d0&
+       +matmul(transpose(d2bmat),d2bmat)/dble(ncp(2)-ndeg(2)+1)**2*0.02d0
   call DGETRF(ncp(0),ncp(0),amat,ncp(0),ipiv,info)
-  write(*,*) info
   cv(1,:)=matmul(transpose(bmat),f(1,:))&
-       +matmul(transpose(d1bmat),df(1,1,:))/dble(ncp(1)-ndeg(1)+1)**2*0d0&
-       +matmul(transpose(d2bmat),df(2,1,:))/dble(ncp(2)-ndeg(2)+1)**2*0d0
+       +matmul(transpose(d1bmat),df(1,1,:))/dble(ncp(1)-ndeg(1)+1)**2*0.02d0&
+       +matmul(transpose(d2bmat),df(2,1,:))/dble(ncp(2)-ndeg(2)+1)**2*0.02d0
   call DGETRS("N",ncp(0),1,amat,ncp(0),ipiv,cv(1,:),ncp(0),info)
   cv(2,:)=matmul(transpose(bmat),f(2,:))&
-       +matmul(transpose(d1bmat),df(1,2,:))/dble(ncp(1)-ndeg(1)+1)**2*0d0&
-       +matmul(transpose(d2bmat),df(2,2,:))/dble(ncp(2)-ndeg(2)+1)**2*0d0
+       +matmul(transpose(d1bmat),df(1,2,:))/dble(ncp(1)-ndeg(1)+1)**2*0.02d0&
+       +matmul(transpose(d2bmat),df(2,2,:))/dble(ncp(2)-ndeg(2)+1)**2*0.02d0
   call DGETRS("N",ncp(0),1,amat,ncp(0),ipiv,cv(2,:),ncp(0),info)
   cv(3,:)=matmul(transpose(bmat),f(3,:))&
-       +matmul(transpose(d1bmat),df(1,3,:))/dble(ncp(1)-ndeg(1)+1)**2*0d0&
-       +matmul(transpose(d2bmat),df(2,3,:))/dble(ncp(2)-ndeg(2)+1)**2*0d0
+       +matmul(transpose(d1bmat),df(1,3,:))/dble(ncp(1)-ndeg(1)+1)**2*0.02d0&
+       +matmul(transpose(d2bmat),df(2,3,:))/dble(ncp(2)-ndeg(2)+1)**2*0.02d0
   call DGETRS("N",ncp(0),1,amat,ncp(0),ipiv,cv(3,:),ncp(0),info)
 
   ! 制御変数
   icnt=1; lrs=>lrs_
   do while(associated(lrs))
      lrs%cp(:)=cv(:,icnt)
-     write(3,*) lrs%cp(:)
      icnt=icnt+1; lrs=>lrs%next
   end do
   
