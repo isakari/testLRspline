@@ -2,11 +2,11 @@
 program diag_waterfall
   implicit none
   
-  integer(8),parameter :: n=50
+  integer(8),parameter :: n=200
   real(8),parameter :: xmin=-2.d0
-  real(8),parameter :: xmax=+2.d0
+  real(8),parameter :: xmax=2.d0
   real(8),parameter :: ymin=-2.d0
-  real(8),parameter :: ymax=+2.d0
+  real(8),parameter :: ymax=2.d0
   
   integer :: i, j
   real(8) :: x, y, z
